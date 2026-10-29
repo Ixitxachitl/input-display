@@ -11,7 +11,7 @@
        Browsers only see a controller once one of its buttons is pressed, so press one after adding the source.
 
   Settings, all URL parameters:
-    layout    a preset: xbox, playstation, switch, gamecube, n64, snes, nes, genesis, saturn, hitbox,
+    layout    a preset: xbox, xbox360, playstation, playstation4, switch, gamecube, n64, snes, nes, genesis, saturn, hitbox,
               leverless-wasd, stick-8, stick-6, stick-4, raw (every button and axis the controller has)
     l         a custom layout from the editor (it fills this in)
     src       or a link to a layout .json file
@@ -25,8 +25,9 @@
     dz        stick deadzone, 0–1 (default 0.1)
     idle      fade out after this many seconds without input (default 0 = never)
     idleop    how far it fades, 0–1 (default 0.15)
-    width     draw it this many CSS pixels wide (height follows the layout's shape) instead of filling the source.
-              For apps that zoom the page or fit the window to it, like Desktop Overlay; OBS doesn't need it.
+    width     draw it this many CSS pixels wide (height follows the layout's shape), or fill = fill the source.
+              Default: fill, except in Desktop Overlay, where it's half the layout's width (e.g. 500 for the Xbox)
+              so the app's zoom and fit to content work.
     align     where it sits when the source is a different shape: center (default), left, right, top, bottom,
               or two of them, e.g. top-left
     demo      1 = a pretend controller plays by itself, for trying it out
@@ -135,13 +136,17 @@
 
         const padParam = q.get('pad');
         const input = new ID.Input({ pad: padParam && padParam !== 'auto' ? +padParam - 1 : 'auto' });
-        // a fixed size gives the page a size of its own, so zooming it or fitting a window to it works
-        const fixedW = parseFloat(q.get('width'));
+        // A fixed size gives the page a size of its own, so zooming it or fitting a window to it works. Desktop
+        // Overlay (its name is in its user agent) sizes overlays by zooming, so there it's the default.
+        const inDesktopOverlay = /\bdesktop-overlay\//i.test(navigator.userAgent);
+        const widthParam = q.get('width');
+        const fixedW = widthParam === 'fill' ? 0 : parseFloat(widthParam) || (inDesktopOverlay ? -1 : 0);
         function draw() {
           view = ID.render(svg, layout, opts);
-          if (fixedW > 0) {
-            svg.style.width = fixedW + 'px';
-            svg.style.height = Math.round((fixedW * layout.h) / layout.w) + 'px';
+          if (fixedW) {
+            const w = fixedW > 0 ? fixedW : Math.round(layout.w / 2);
+            svg.style.width = w + 'px';
+            svg.style.height = Math.round((w * layout.h) / layout.w) + 'px';
           }
         }
         let view = null;

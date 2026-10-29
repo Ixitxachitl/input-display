@@ -13,7 +13,7 @@ at any size.
 
 | Group     | Presets                                                                  |
 | --------- | ------------------------------------------------------------------------ |
-| Gamepads  | Xbox, PlayStation, Switch Pro, GameCube                                  |
+| Gamepads  | Xbox Series, Xbox 360, PlayStation 5, PlayStation 4, Switch Pro, GameCube |
 | Retro     | N64, SNES, NES, Genesis 6-button, Saturn                                 |
 | Leverless | Hit Box, Leverless (WASD)                                                |
 | Arcade    | Fight stick (8-button, Vewlix), Arcade (6-button), Arcade (4-button)     |
@@ -61,7 +61,11 @@ hand. The full list is in the comment at the top of `overlay.html`: `theme`, `co
 `idle` (fade out when nothing's pressed), color overrides, `align`, `src` to load a layout `.json` from a URL,
 and `demo=1`, where a pretend controller plays by itself.
 
-Apps that zoom the page or fit their window to it (like Desktop Overlay) need a fixed size: set **Fixed width**
-in the editor (`width=` in the link). Without it the overlay always fills its window, so zooming changes nothing.
+In OBS the overlay fills the source. In Desktop Overlay it has a size of its own instead (half the layout's
+width), so the app's zoom and fit to content resize it. For another app that zooms the page, set **Fixed width**
+in the editor (`width=` in the link); `width=fill` always fills.
 
 There's no build step and no dependencies.
+
+The Xbox, PlayStation and Switch Pro outlines are traced from Kenney's
+[Input Prompts](https://kenney.nl/assets/input-prompts) (CC0).
