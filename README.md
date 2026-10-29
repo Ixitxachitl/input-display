@@ -61,4 +61,7 @@ hand. The full list is in the comment at the top of `overlay.html`: `theme`, `co
 `idle` (fade out when nothing's pressed), color overrides, `align`, `src` to load a layout `.json` from a URL,
 and `demo=1`, where a pretend controller plays by itself.
 
+Apps that zoom the page or fit their window to it (like Desktop Overlay) need a fixed size: set **Fixed width**
+in the editor (`width=` in the link). Without it the overlay always fills its window, so zooming changes nothing.
+
 There's no build step and no dependencies.

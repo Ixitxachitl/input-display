@@ -59,7 +59,7 @@
     undo: [],
     redo: [],
     snap: 10,
-    opts: Object.assign({ theme: 'dark', colors: true, glow: false, body: true, pad: 'auto', idle: 0 }, load(OPTS_KEY, {})),
+    opts: Object.assign({ theme: 'dark', colors: true, glow: false, body: true, pad: 'auto', idle: 0, width: 0 }, load(OPTS_KEY, {})),
   };
   if (!ID.themes[S.opts.theme]) S.opts.theme = 'dark';
   let saved = load(SAVED_KEY, {});
@@ -887,6 +887,7 @@
     $('#optBody').checked = S.opts.body;
     $('#optPad').value = S.opts.pad;
     $('#optIdle').value = S.opts.idle || 0;
+    $('#optWidth').value = S.opts.width || '';
   }
   function optChanged() {
     store(OPTS_KEY, S.opts);
@@ -906,6 +907,7 @@
   $('#optBody').addEventListener('change', (ev) => ((S.opts.body = ev.target.checked), optChanged()));
   $('#optPad').addEventListener('change', (ev) => ((S.opts.pad = ev.target.value), optChanged()));
   $('#optIdle').addEventListener('input', (ev) => ((S.opts.idle = Math.max(0, parseFloat(ev.target.value) || 0)), optChanged()));
+  $('#optWidth').addEventListener('input', (ev) => ((S.opts.width = Math.max(0, Math.round(parseFloat(ev.target.value) || 0))), optChanged()));
 
   let urlTimer = 0;
   let urlSeq = 0;
@@ -926,12 +928,15 @@
     if (!o.body) p.set('body', '0');
     if (o.pad !== 'auto') p.set('pad', o.pad);
     if (o.idle > 0) p.set('idle', o.idle);
+    if (o.width > 0) p.set('width', o.width);
     const url = new URL('overlay.html', location.href);
     url.search = p.toString();
     $('#url').value = url.href;
     const L = S.layout;
-    $('#sizeNote').textContent = 'Make the source ' + Math.round(L.w) + ' × ' + Math.round(L.h) +
-      ' or any size of that shape; it scales to fit.' + (S.preset === 'raw' ? ' The overlay adapts this one to whatever controller it sees.' : '');
+    $('#sizeNote').textContent = (o.width > 0
+      ? 'It draws ' + o.width + ' × ' + Math.round((o.width * L.h) / L.w) + ' px; zoom the page to make it bigger or smaller.'
+      : 'Make the source ' + Math.round(L.w) + ' × ' + Math.round(L.h) + ' or any size of that shape; it scales to fit.') +
+      (S.preset === 'raw' ? ' The overlay adapts this one to whatever controller it sees.' : '');
   }
 
   $('#copyUrl').addEventListener('click', async function () {

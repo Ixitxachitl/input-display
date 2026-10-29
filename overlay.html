@@ -25,6 +25,8 @@
     dz        stick deadzone, 0–1 (default 0.1)
     idle      fade out after this many seconds without input (default 0 = never)
     idleop    how far it fades, 0–1 (default 0.15)
+    width     draw it this many CSS pixels wide (height follows the layout's shape) instead of filling the source.
+              For apps that zoom the page or fit the window to it, like Desktop Overlay; OBS doesn't need it.
     align     where it sits when the source is a different shape: center (default), left, right, top, bottom,
               or two of them, e.g. top-left
     demo      1 = a pretend controller plays by itself, for trying it out
@@ -133,7 +135,17 @@
 
         const padParam = q.get('pad');
         const input = new ID.Input({ pad: padParam && padParam !== 'auto' ? +padParam - 1 : 'auto' });
-        let view = ID.render(svg, layout, opts);
+        // a fixed size gives the page a size of its own, so zooming it or fitting a window to it works
+        const fixedW = parseFloat(q.get('width'));
+        function draw() {
+          view = ID.render(svg, layout, opts);
+          if (fixedW > 0) {
+            svg.style.width = fixedW + 'px';
+            svg.style.height = Math.round((fixedW * layout.h) / layout.w) + 'px';
+          }
+        }
+        let view = null;
+        draw();
         let rawShape = '';
 
         const idle = parseFloat(q.get('idle')) || 0;
@@ -150,7 +162,7 @@
             if (shape !== rawShape) {
               rawShape = shape;
               layout = ID.rawLayout(st.pad);
-              view = ID.render(svg, layout, opts);
+              draw();
             }
           }
           view.update(st);
