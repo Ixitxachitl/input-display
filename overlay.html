@@ -1,0 +1,172 @@
+<!doctype html>
+<!--
+  Input Display: OBS browser source
+  ---------------------------------
+  Shows a controller and lights up what's pressed, from any controller the browser can see (the Gamepad API:
+  XInput and DirectInput pads, PlayStation and Switch controllers, fight sticks, leverless boxes, adapters…).
+  Everything is vector, so it stays sharp at any size; it fits itself to the source and keeps its shape.
+
+  OBS: Add > Browser, with the link from the editor (index.html). Make the source the shape of the layout (the
+       editor shows it, e.g. 1000×800) or any size you like. The background is transparent inside OBS.
+       Browsers only see a controller once one of its buttons is pressed, so press one after adding the source.
+
+  Settings, all URL parameters:
+    layout    a preset: xbox, playstation, switch, gamecube, n64, snes, nes, genesis, saturn, hitbox,
+              leverless-wasd, stick-8, stick-6, stick-4, raw (every button and axis the controller has)
+    l         a custom layout from the editor (it fills this in)
+    src       or a link to a layout .json file
+    pad       which controller: auto (whichever was used last, the default) or 1–4
+    theme     dark (default), light, outline, neon, ghost
+    colors    0 = ignore the layout's own button colors, use the theme's
+    glow      1 = glow on what's pressed, 0 = no glow (default: the theme's)
+    body      0 = leave out the controller body / panel
+    fill, press, outline, text, bodyfill
+              theme colors to override, e.g. press=ff3366 (no # needed)
+    dz        stick deadzone, 0–1 (default 0.1)
+    idle      fade out after this many seconds without input (default 0 = never)
+    idleop    how far it fades, 0–1 (default 0.15)
+    align     where it sits when the source is a different shape: center (default), left, right, top, bottom,
+              or two of them, e.g. top-left
+    demo      1 = a pretend controller plays by itself, for trying it out
+    bg        testing: none = transparent in a normal browser too, or a color (default: dark outside OBS)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Input Display</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      #art {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        transition: opacity 0.6s ease;
+      }
+      #hint {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        font: 600 14px system-ui, 'Segoe UI', Roboto, sans-serif;
+        color: #e6e8ef;
+        background: #000a;
+        padding: 8px 14px;
+        border-radius: 8px;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <svg id="art" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Controller input display"></svg>
+    <div id="hint" hidden></div>
+    <script src="core.js"></script>
+    <script src="presets.js"></script>
+    <script>
+      (async function () {
+        'use strict';
+        const ID = window.InputDisplay;
+        const q = new URLSearchParams(location.search);
+        const svg = document.getElementById('art');
+        const hint = document.getElementById('hint');
+        const inOBS = !!window.obsstudio;
+
+        const bg = q.get('bg');
+        if (bg && bg !== 'none') document.body.style.background = color(bg);
+        else if (!bg && !inOBS) document.body.style.background = '#1d1f27';
+
+        function color(v) {
+          return v && /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v;
+        }
+        function flag(name) {
+          const v = q.get(name);
+          return v == null ? null : v !== '0' && v !== 'false';
+        }
+        function showHint(msg) {
+          hint.textContent = msg;
+          hint.hidden = !msg;
+        }
+
+        // where it sits when the source isn't the layout's shape
+        const al = (q.get('align') || '').toLowerCase();
+        const ax = /left/.test(al) ? 'xMin' : /right/.test(al) ? 'xMax' : 'xMid';
+        const ay = /top/.test(al) ? 'YMin' : /bottom/.test(al) ? 'YMax' : 'YMid';
+        svg.setAttribute('preserveAspectRatio', ax + ay + ' meet');
+
+        let layout = null;
+        const presetId = q.get('layout') || 'xbox';
+        const dynamic = !q.get('l') && !q.get('src') && presetId === 'raw';
+        try {
+          if (q.get('l')) layout = await ID.decodeLayout(q.get('l'));
+          else if (q.get('src')) layout = ID.validate(await (await fetch(q.get('src'), { cache: 'no-store' })).json());
+          else {
+            layout = ID.presetLayout(presetId);
+            if (!layout) throw new Error('There is no preset called "' + presetId + '"');
+          }
+        } catch (err) {
+          document.body.style.background = '#1d1f27';
+          showHint("Couldn't load the layout: " + (err && err.message ? err.message : err));
+          return;
+        }
+
+        const dz = parseFloat(q.get('dz'));
+        const opts = {
+          theme: q.get('theme') || 'dark',
+          colors: flag('colors') !== false,
+          glow: flag('glow'),
+          body: flag('body') !== false,
+          dz: dz >= 0 && dz < 1 ? dz : 0.1,
+          over: {
+            btn: color(q.get('fill')),
+            on: color(q.get('press')),
+            line: color(q.get('outline')),
+            text: color(q.get('text')),
+            body: color(q.get('bodyfill')),
+          },
+        };
+
+        const padParam = q.get('pad');
+        const input = new ID.Input({ pad: padParam && padParam !== 'auto' ? +padParam - 1 : 'auto' });
+        let view = ID.render(svg, layout, opts);
+        let rawShape = '';
+
+        const idle = parseFloat(q.get('idle')) || 0;
+        const idleOp = q.get('idleop') == null ? 0.15 : Math.max(0, Math.min(1, parseFloat(q.get('idleop')) || 0));
+        let faded = false;
+
+        const demo = flag('demo') === true;
+        function frame() {
+          const st = demo ? ID.demoState(performance.now()) : input.poll();
+          if (demo) input.lastMove = performance.now();
+          if (dynamic && st.pad) {
+            // the raw layout follows whatever the controller has
+            const shape = st.pad.buttons.length + '/' + st.pad.axes.map((v) => (v > 1.02 ? 'h' : 'a')).join('');
+            if (shape !== rawShape) {
+              rawShape = shape;
+              layout = ID.rawLayout(st.pad);
+              view = ID.render(svg, layout, opts);
+            }
+          }
+          view.update(st);
+          if (!inOBS) showHint(st.pad ? '' : 'Press a button on your controller');
+          if (idle > 0) {
+            const fade = performance.now() - input.lastMove > idle * 1000;
+            if (fade !== faded) {
+              faded = fade;
+              svg.style.opacity = fade ? idleOp : 1;
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        input.lastMove = performance.now();
+        requestAnimationFrame(frame);
+      })();
+    </script>
+  </body>
+</html>

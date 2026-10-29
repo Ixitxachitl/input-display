@@ -1,0 +1,555 @@
+<!doctype html>
+<!--
+  Input Display: editor
+  ---------------------
+  Pick a preset or build a layout (hit boxes, custom fight sticks, anything), bind each part to a controller
+  input by pressing it, choose a look, then copy the overlay link into an OBS browser source. Layouts you save
+  stay in this browser; the link carries the whole layout, so OBS doesn't need them.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Input Display · Editor</title>
+    <meta
+      name="description"
+      content="A controller input display for OBS. Presets for common controllers, fight sticks and hit boxes, and an editor for your own layouts."
+    />
+    <style>
+      :root {
+        --bg: #14161c;
+        --panel: #1d2028;
+        --field: #272b35;
+        --line: #343947;
+        --text: #e9ebf1;
+        --muted: #9aa1b2;
+        --accent: #8b6cff;
+        --accent-2: #38c8ff;
+        --danger: #ff5a6a;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.4 system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        background: var(--field);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+        border-color: var(--line);
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 600;
+      }
+      button.danger:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+      button.capturing {
+        background: var(--accent-2);
+        border-color: var(--accent-2);
+        color: #0b1520;
+      }
+      input[type='text'],
+      input[type='number'],
+      select,
+      textarea {
+        width: 100%;
+        background: var(--field);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 8px;
+        min-width: 0;
+      }
+      input[type='color'] {
+        width: 38px;
+        height: 32px;
+        padding: 2px;
+        background: var(--field);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      textarea {
+        resize: vertical;
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent-2);
+        outline-offset: 1px;
+      }
+      h2 {
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+      header h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      header .sub {
+        color: var(--muted);
+      }
+      #padStatus {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        min-width: 0;
+      }
+      #padStatus .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #555b6b;
+        flex: none;
+      }
+      #padStatus.on .dot {
+        background: #3ddc84;
+      }
+      #padName {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 46vw;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr) 330px;
+        height: calc(100vh - 51px);
+      }
+      aside {
+        overflow-y: auto;
+        padding: 14px;
+        background: var(--panel);
+      }
+      aside.left {
+        border-right: 1px solid var(--line);
+      }
+      aside.right {
+        border-left: 1px solid var(--line);
+      }
+      aside section + section {
+        margin-top: 20px;
+      }
+      .group-name {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 10px 0 6px;
+      }
+      .presets {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .preset {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px;
+        text-align: center;
+        font-size: 12px;
+        white-space: normal;
+      }
+      .preset svg {
+        width: 100%;
+        height: 58px;
+      }
+      .preset.current {
+        border-color: var(--accent);
+        background: #2c2642;
+      }
+      .saved-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .saved-item {
+        display: flex;
+        gap: 6px;
+      }
+      .saved-item .open {
+        flex: 1;
+        text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .saved-item .open.current {
+        border-color: var(--accent);
+      }
+      .empty {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .row + .row {
+        margin-top: 8px;
+      }
+
+      main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .toolbar .sep {
+        width: 1px;
+        align-self: stretch;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .toolbar label {
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .toolbar select {
+        width: auto;
+      }
+      .stage {
+        flex: 1;
+        min-height: 0;
+        padding: 18px;
+        background-color: #101217;
+        background-image: radial-gradient(#ffffff12 1px, transparent 1px);
+        background-size: 18px 18px;
+      }
+      #canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        user-select: none;
+      }
+      #canvas [data-i] {
+        cursor: move;
+      }
+      .readout {
+        border-top: 1px solid var(--line);
+        padding: 8px 14px 10px;
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 30vh;
+        overflow-y: auto;
+      }
+      .readout .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+      }
+      .chip {
+        display: inline-block;
+        min-width: 24px;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: var(--field);
+        border: 1px solid var(--line);
+        text-align: center;
+        font-family: ui-monospace, Consolas, monospace;
+        color: var(--muted);
+      }
+      .chip.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .readout b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .field {
+        margin-bottom: 10px;
+      }
+      .field > label,
+      .field > .lbl {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .grid3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+      .bind-row {
+        display: flex;
+        gap: 4px;
+      }
+      .bind-row input {
+        flex: 1;
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 13px;
+      }
+      .color-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .color-row .none {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 4px 0 10px;
+      }
+      .layers {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px;
+      }
+      .layers button {
+        flex: none;
+        border: 0;
+        background: none;
+        text-align: left;
+        padding: 3px 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .layers button.sel {
+        background: #2c2642;
+        color: #fff;
+      }
+      #url {
+        height: 84px;
+        word-break: break-all;
+      }
+      .size-note {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #toast {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        background: var(--accent);
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      details summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 12px;
+        margin: 6px 0;
+      }
+      code {
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+        background: var(--field);
+        padding: 0 4px;
+        border-radius: 4px;
+      }
+
+      @media (max-width: 1100px) {
+        .app {
+          grid-template-columns: minmax(0, 1fr);
+          height: auto;
+        }
+        aside.left,
+        aside.right {
+          border: 0;
+          border-top: 1px solid var(--line);
+        }
+        main {
+          order: -1;
+          height: 70vh;
+        }
+        .presets {
+          grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Input Display</h1>
+      <span class="sub">controller overlay editor</span>
+      <div id="padStatus" title="">
+        <span class="dot"></span><span id="padName">No controller yet. Press a button on it.</span>
+      </div>
+    </header>
+
+    <div class="app">
+      <aside class="left">
+        <section>
+          <h2>Presets</h2>
+          <div id="presets"></div>
+        </section>
+        <section>
+          <h2>My layouts</h2>
+          <div id="saved" class="saved-list"></div>
+          <div class="row" style="margin-top: 10px">
+            <button id="newBlank" type="button">New blank</button>
+            <button id="importBtn" type="button">Import .json</button>
+            <input id="importFile" type="file" accept=".json,application/json" hidden />
+          </div>
+        </section>
+      </aside>
+
+      <main>
+        <div class="toolbar" role="toolbar" aria-label="Edit">
+          <button type="button" data-add="btn">+ Button</button>
+          <button type="button" data-add="stick">+ Stick</button>
+          <button type="button" data-add="trig">+ Trigger</button>
+          <button type="button" data-add="dpad">+ D-pad</button>
+          <button type="button" data-add="lever">+ Arcade stick</button>
+          <button type="button" data-add="label">+ Label</button>
+          <button type="button" data-add="shape">+ Shape</button>
+          <span class="sep"></span>
+          <button id="dupBtn" type="button" title="Duplicate (Ctrl+D)">Duplicate</button>
+          <button id="mirrorBtn" type="button" title="Copy it to the mirror-image spot on the other side">Mirror copy</button>
+          <button id="delBtn" type="button" class="danger" title="Delete (Del)">Delete</button>
+          <span class="sep"></span>
+          <button id="undoBtn" type="button" title="Undo (Ctrl+Z)">Undo</button>
+          <button id="redoBtn" type="button" title="Redo (Ctrl+Y)">Redo</button>
+          <span class="sep"></span>
+          <label
+            >Snap
+            <select id="snap">
+              <option value="1">off</option>
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="25">25</option>
+            </select>
+          </label>
+        </div>
+        <div class="stage" id="stage">
+          <svg id="canvas" xmlns="http://www.w3.org/2000/svg" aria-label="Layout canvas"></svg>
+        </div>
+        <div class="readout" id="readout"></div>
+      </main>
+
+      <aside class="right">
+        <section id="props"></section>
+        <section>
+          <h2>Overlay link</h2>
+          <div class="field">
+            <label for="optTheme">Theme</label>
+            <select id="optTheme"></select>
+          </div>
+          <label class="check"><input id="optColors" type="checkbox" checked /> Use the buttons' own colors</label>
+          <label class="check"><input id="optGlow" type="checkbox" /> Glow when pressed</label>
+          <label class="check"><input id="optBody" type="checkbox" checked /> Show the controller body / panel</label>
+          <div class="grid2">
+            <div class="field">
+              <label for="optPad">Controller</label>
+              <select id="optPad">
+                <option value="auto">Last used</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="optIdle">Fade when idle (s)</label>
+              <input id="optIdle" type="number" min="0" step="1" value="0" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="url">Add this as a Browser source in OBS</label>
+            <textarea id="url" readonly></textarea>
+          </div>
+          <div class="row">
+            <button id="copyUrl" type="button" class="primary">Copy link</button>
+            <button id="openUrl" type="button">Open</button>
+          </div>
+          <p class="size-note" id="sizeNote"></p>
+        </section>
+      </aside>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script src="core.js"></script>
+    <script src="presets.js"></script>
+    <script src="editor.js"></script>
+  </body>
+</html>
