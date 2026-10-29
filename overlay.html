@@ -137,8 +137,8 @@
         const padParam = q.get('pad');
         const input = new ID.Input({ pad: padParam && padParam !== 'auto' ? +padParam - 1 : 'auto' });
         // A fixed size gives the page a size of its own, so zooming it or fitting a window to it works. Desktop
-        // Overlay (its name is in its user agent) sizes overlays by zooming, so there it's the default.
-        const inDesktopOverlay = /\bdesktop-overlay\//i.test(navigator.userAgent);
+        // Overlay (DesktopOverlay/x.y.z is in its user agent) sizes overlays by zooming, so there it's the default.
+        const inDesktopOverlay = /\bdesktop-?overlay\//i.test(navigator.userAgent);
         const widthParam = q.get('width');
         const fixedW = widthParam === 'fill' ? 0 : parseFloat(widthParam) || (inDesktopOverlay ? -1 : 0);
         function draw() {
