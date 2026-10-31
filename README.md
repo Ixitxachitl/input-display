@@ -14,7 +14,7 @@ at any size.
 | Group     | Presets                                                                  |
 | --------- | ------------------------------------------------------------------------ |
 | Gamepads  | Xbox Series, Xbox 360, PlayStation 5, PlayStation 4, Switch Pro, GameCube |
-| Retro     | N64, SNES, NES, Genesis 6-button, Saturn                                 |
+| Retro     | N64, SNES, NES, Mega Drive / Genesis, Saturn                             |
 | Leverless | Hit Box, Leverless (WASD)                                                |
 | Arcade    | Fight stick (8-button, Vewlix), Arcade (6-button), Arcade (4-button)     |
 | Tools     | All inputs: every button and axis the controller has, laid out as it is |
@@ -68,4 +68,7 @@ in the editor (`width=` in the link); `width=fill` always fills.
 There's no build step and no dependencies.
 
 The Xbox, PlayStation and Switch Pro outlines are traced from Kenney's
-[Input Prompts](https://kenney.nl/assets/input-prompts) (CC0).
+[Input Prompts](https://kenney.nl/assets/input-prompts) (CC0). The GameCube, N64, SNES, NES, Mega Drive and Saturn
+outlines are modified from [Controllercons](https://controllercons.github.io/) by Kieran McClung, under the SIL Open
+Font License 1.1 (see [LICENSE-controllercons.txt](LICENSE-controllercons.txt)). The shoulder buttons and triggers are
+bands traced along each body's top edge, so they sit where they are on the real controller.

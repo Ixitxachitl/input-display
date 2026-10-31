@@ -7,17 +7,19 @@
   A layout is { name, w, h, sw?, els: [...] }: a w × h canvas (the SVG viewBox, so it scales to any size) and a
   list of elements drawn in order. Every element has a type t, a centre x, y and an optional rotation r:
 
-    btn    button: w, h, shape (circle | round | rect | pill), label or icon, bind; fill: true shows how far an
-           analog button is pressed
+    btn    button: w, h, shape (circle | round | rect | pill | path, which draws d around x, y), label or icon,
+           bind; fill: true shows how far an analog button is pressed
     stick  thumbstick: w, bx and by (its axes), bind (clicking it), cap (cap size, 0–1)
-    trig   analog bar: w, h, bind, dir (up | down | left | right: which way it fills), bi: true for a -1…1 axis
+    trig   analog bar: w, h, bind, dir (up | down | left | right: which way it fills), bi: true for a -1…1 axis;
+           d: a path around x, y to draw it as instead of a rounded bar (w and h still set how it fills)
     dpad   d-pad: w, bu bd bl br (one binding per direction), style (cross | buttons)
     lever  arcade stick: w, bu bd bl br, gate (circle | square | octagon)
     label  text: label, fs
     shape  decoration (controller bodies, panels): d (an SVG path around x, y) and sc, or shape, w and h;
            inset: true draws it as a shaded recess
 
-  Any element can have c (its pressed / accent color), tc (its label color), f and s (fill and outline).
+  Any element can have c (its pressed / accent color), tc (its label color), f and s (fill and outline), and lx, ly
+  to move its label off the centre.
 */
 (function () {
   'use strict';
@@ -297,7 +299,7 @@
       el = icon(e.icon, m * (e.is || 0.3), col, g);
       if (!ID.icons[e.icon].fill) attr = 'stroke';
     } else if (e.label) {
-      el = mk('text', { x: 0, y: 0, 'font-size': e.fs || Math.round(m * 0.42), fill: col, 'text-anchor': 'middle',
+      el = mk('text', { x: e.lx || 0, y: e.ly || 0, 'font-size': e.fs || Math.round(m * 0.42), fill: col, 'text-anchor': 'middle',
         'dominant-baseline': 'central' }, g);
       el.textContent = e.label;
     }
@@ -327,9 +329,12 @@
     const h = e.h || w;
     const kind = e.shape || 'circle';
     const sw = c.sw;
-    shape(kind, w, h, { fill: e.f || T.btn, stroke: e.s || T.line, 'stroke-width': sw }, g);
+    const draw = (attrs) => kind === 'path' && e.d
+      ? mk('path', Object.assign({ d: e.d, 'stroke-linejoin': 'round' }, attrs), g)
+      : shape(kind, w, h, attrs, g);
+    draw({ fill: e.f || T.btn, stroke: e.s || T.line, 'stroke-width': sw });
     const acc = c.acc(e);
-    const lit = shape(kind, w, h, { fill: acc, stroke: acc, 'stroke-width': sw, opacity: 0, filter: c.glow }, g);
+    const lit = draw({ fill: acc, stroke: acc, 'stroke-width': sw, opacity: 0, filter: c.glow });
     const clip = e.fill ? clipRect(c, lit) : null;
     const setFace = face(e, w, h, T, c, g);
     let last = -1;
@@ -395,10 +400,11 @@
     const sw = c.sw;
     const rx = Math.min(w, h) * 0.22;
     const acc = c.acc(e);
-    mk('rect', { x: -w / 2, y: -h / 2, width: w, height: h, rx: rx, fill: e.f || T.btn, stroke: e.s || T.line,
-      'stroke-width': sw }, g);
-    const lit = mk('rect', { x: -w / 2, y: -h / 2, width: w, height: h, rx: rx, fill: acc, stroke: acc,
-      'stroke-width': sw, filter: c.glow }, g);
+    const draw = (attrs) => e.d
+      ? mk('path', Object.assign({ d: e.d, 'stroke-linejoin': 'round' }, attrs), g)
+      : mk('rect', Object.assign({ x: -w / 2, y: -h / 2, width: w, height: h, rx: rx }, attrs), g);
+    draw({ fill: e.f || T.btn, stroke: e.s || T.line, 'stroke-width': sw });
+    const lit = draw({ fill: acc, stroke: acc, 'stroke-width': sw, filter: c.glow });
     const clip = clipRect(c, lit);
     if (e.bi) mk('line', dir === 'left' || dir === 'right'
       ? { x1: 0, x2: 0, y1: -h / 2, y2: h / 2, stroke: T.line, 'stroke-width': sw }

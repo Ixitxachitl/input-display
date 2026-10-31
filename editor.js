@@ -684,7 +684,7 @@
     }
 
     if (t === 'btn') {
-      pick(box, 'Shape', e, 'shape', BTN_SHAPES, 'circle');
+      pick(box, 'Shape', e, 'shape', e.d ? BTN_SHAPES.concat([['path', 'Traced']]) : BTN_SHAPES, 'circle');
       const lab = el('div', 'grid2');
       box.append(lab);
       txt(lab, 'Label', e, 'label');
